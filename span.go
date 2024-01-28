@@ -1,10 +1,24 @@
 package spanset
 
-import "fmt"
+import (
+	"fmt"
+)
 
-type Span[T any] interface {
+type SpanOptions byte
+
+const (
+	InfNegative SpanOptions = 1 << iota
+	SpanStart
+	SpanEnd
+	InfPositive
+	bothEnds = SpanStart | SpanEnd
+	infinite = bothEnds | InfNegative | InfPositive
+)
+
+type Span[T ordered] interface {
 	GetStart() T
 	GetEnd() T
+
 	IncludeStart() bool
 	IncludeEnd() bool
 	IncludeBefore() bool
@@ -12,26 +26,34 @@ type Span[T any] interface {
 
 	IsSingleton() bool
 	IsUniversal() bool
+	IsEmpty() bool
 }
 
-func NewSpan[T any](start T, end T) Span {
+type span[T ordered] struct {
+	start, end T
+	includes   byte
+}
+
+func (s span[T]) GetStart() T          { return (s.start) }
+func (s span[T]) GetEnd() T            { return (s.end) }
+func (s *span[T]) IncludeBefore() bool { return (s.includes & byte(InfNegative)) != 0 }
+func (s *span[T]) IncludeStart() bool  { return (s.includes & byte(SpanStart)) != 0 }
+func (s *span[T]) IncludeEnd() bool    { return (s.includes & byte(SpanEnd)) != 0 }
+func (s *span[T]) IncludeAfter() bool  { return (s.includes & byte(InfPositive)) != 0 }
+func (s *span[T]) IsSingleton() bool   { return ((s.includes & byte(bothEnds)) != 0) && s.start == s.end }
+func (s *span[T]) IsUniversal() bool   { return (s.includes & byte(infinite)) != 0 }
+func (s *span[T]) IsEmpty() bool       { return (s.includes & byte(infinite)) == 0 }
+
+func newIntSpan[T ordered](start T, end T, buildInclusions SpanOptions) span[int] {
 	if a, ok := any(start).(int); ok {
 		if b, ok := any(end).(int); ok {
-			return &span{Start: a, End: b, IncludeStart: true, IncludeEnd: true}
+			s := span[int]{
+				start:    a,
+				end:      b,
+				includes: byte(buildInclusions),
+			}
+			return s
 		}
-
 	}
 	panic(fmt.Sprintf("invalid span types: %v, %v", start, end))
 }
-
-type span[T any] struct {
-	start, end T
-
-	includeStart, includeEnd, includeBefore, includeAfter, isSingleton, isUniversal bool
-}
-
-func GetStart[T any](s *span[T]) T        { return s.start }
-func GetEnd[T any](s *span[T]) T          { return s.end }
-func IncludeStart[T any](s *span[T]) bool { return s.includeStart }
-func IncludeEnd[T any](s *span[T]) bool   { return s.includeEnd }
-func IsSingleton[T any](s *span[T]) bool  { return s.start == s.end }
