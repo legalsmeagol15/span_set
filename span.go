@@ -2,9 +2,12 @@ package spanset
 
 import (
 	"fmt"
+
+	"golang.org/x/exp/constraints"
 )
 
 type SpanOptions byte
+type Ordered constraints.Ordered
 
 const (
 	InfNegative SpanOptions = 1 << iota
@@ -15,7 +18,7 @@ const (
 	infinite = bothEnds | InfNegative | InfPositive
 )
 
-type Span[T ordered] interface {
+type Span[T Ordered] interface {
 	GetStart() T
 	GetEnd() T
 
@@ -29,7 +32,7 @@ type Span[T ordered] interface {
 	IsEmpty() bool
 }
 
-type span[T ordered] struct {
+type span[T Ordered] struct {
 	start, end T
 	includes   byte
 }
@@ -44,7 +47,7 @@ func (s *span[T]) IsSingleton() bool   { return ((s.includes & byte(bothEnds)) !
 func (s *span[T]) IsUniversal() bool   { return (s.includes & byte(infinite)) != 0 }
 func (s *span[T]) IsEmpty() bool       { return (s.includes & byte(infinite)) == 0 }
 
-func newIntSpan[T ordered](start T, end T, buildInclusions SpanOptions) span[int] {
+func newIntSpan[T Ordered](start T, end T, buildInclusions SpanOptions) span[int] {
 	if a, ok := any(start).(int); ok {
 		if b, ok := any(end).(int); ok {
 			s := span[int]{
