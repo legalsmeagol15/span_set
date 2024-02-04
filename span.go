@@ -1,6 +1,9 @@
 package spanset
 
 import (
+	"fmt"
+	"strings"
+
 	"golang.org/x/exp/constraints"
 )
 
@@ -50,6 +53,32 @@ func (s span[T]) IncludeAfter() bool  { return (s.includes & InfPositive) != 0 }
 func (s span[T]) IsSingleton() bool   { return ((s.includes & bothEnds) != 0) && s.start == s.end }
 func (s span[T]) IsUniversal() bool   { return (s.includes & infinite) != 0 }
 func (s span[T]) IsEmpty() bool       { return ((s.includes & infinite) == 0) && s.start == s.end }
+func (s span[T]) IsInfNegative() bool { return ((s.includes & InfNegative) != 0) }
+func (s span[T]) IsInfPositive() bool { return ((s.includes & InfPositive) != 0) }
+
+func (s span[T]) String() string {
+	var sb strings.Builder
+	if s.IsInfNegative() {
+		sb.WriteString("<-- ")
+	}
+	if s.IncludeStart() {
+		sb.WriteString(fmt.Sprintf("%v", s.start))
+	} else {
+		sb.WriteString(fmt.Sprintf("(%v)", s.start))
+	}
+	if s.start != s.end {
+		sb.WriteString(" --- ")
+		if s.IncludeEnd() {
+			sb.WriteString(fmt.Sprintf("%v", s.end))
+		} else {
+			sb.WriteString(fmt.Sprintf("(%v)", s.end))
+		}
+	}
+	if s.IsInfPositive() {
+		sb.WriteString(" -->")
+	}
+	return sb.String()
+}
 
 func includes(includeStart, IncludeEnd bool) SpanOptions {
 	i := None
@@ -61,8 +90,7 @@ func includes(includeStart, IncludeEnd bool) SpanOptions {
 	}
 	return i
 }
-func univConsecutive[T Ordered](a, b T) bool { return false }
-func intConsecutive(a, b int) bool           { return a+1 == b }
+
 func to_span[T Ordered](s Span[T]) span[T] {
 	if as_span, ok := s.(span[T]); ok {
 		return as_span
@@ -129,7 +157,7 @@ func (a *span[T]) intersection(b *span[T]) span[T] {
 			// Case 0b
 			if a.IncludeEnd() && b.IncludeStart() {
 				return span[T]{
-					start:    a.start,
+					start:    b.start,
 					end:      a.end,
 					includes: includes(a.IncludeStart(), b.IncludeEnd()),
 				}
@@ -303,5 +331,4 @@ func (s *span[T]) inverse() (span[T], span[T]) {
 	b.includes ^= InfPositive
 
 	return a, b
-
 }
