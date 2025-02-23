@@ -118,43 +118,45 @@ func (s *span[T]) contains_singleton(item T) bool {
 }
 func (a *span[T]) intersection(b *span[T]) span[T] {
 	/*
-		case 0: a.start < b.start
-			case 0a: <--a-->
-							 <--b-->
-			case 0b: <--a--|
-						   |---b--->
-			case 0c: <------a------>
-						 <--b-->
-			case 0d: <--a-->
-						<----b----->
-			case 0e: <------a------|
-							<--b---|
-		case 1: a.start == b.start
-			case 1a: |--a-->
-					 |------b------>
-			case 1b: |------a------|
-					 |------b------|
-			case 1c: |------a------>
-					 |--b-->
-		case 2: a.start > b.start
-			case 2a: <--b-->
-							 <--a-->
-			case 2b: <--b--|
-						   |---a--->
-			case 2c: <------b------>
-						<--a-->
-			case 2d: <--b-->
-						<----a----->
-			case 2e: <------b------|
-							<--a---|
+		1.0:	a-----a
+						b-----b
+		1.1:	a---a
+					b---b
+		1.2:	a-----a
+					b-----b
+		1.3:	a-------a
+					b---b
+		1.4:	a-------a
+				  b---b
+
+		2.2:	a---a
+				b-------b
+		2.3:	a---a
+				b---b
+		2.4:	a------a
+				b---b
+
+		3.2:	  a---a
+				b-------b
+		3.3			a---a
+				b-------b
+		3.4:	  a-----a
+				b-----b
+
+		4.4:		a---a
+				b---b
+
+		5.4:		   a---a
+				b---b
 
 	*/
+
 	if a.end < b.start || b.end < a.start {
-		// Rule out cases 0a and 2a
+		// Rule out cases 1.0 and 5.4
 	} else if a.start < b.start {
-		// Cases 0b-0e
+		// Cases 1.1-1.4
 		if a.end == b.start {
-			// Case 0b
+			// Case 1.1
 			if a.IncludeEnd() && b.IncludeStart() {
 				return span[T]{
 					start:    b.start,
@@ -162,65 +164,10 @@ func (a *span[T]) intersection(b *span[T]) span[T] {
 					includes: includes(a.IncludeStart(), b.IncludeEnd()),
 				}
 			}
-		} else if a.end > b.end {
-			// Case 0c
-			return *b
-		} else if a.end > b.start {
-			// Case 0d
-			return span[T]{
-				start:    b.start,
-				end:      a.end,
-				includes: includes(b.IncludeStart(), a.IncludeEnd())}
-		} else if a.end == b.end {
-			// Case 0e
-			return span[T]{
-				start:    b.start,
-				end:      a.end,
-				includes: includes(b.IncludeStart(), a.IncludeEnd() && b.IncludeEnd()),
-			}
-		}
-	} else if a.start > b.start {
-		// Cases 2b - 2e
-		if a.start == b.end {
-			// Case 2b
-			if a.IncludeStart() && b.IncludeEnd() {
-				return span[T]{
-					start:    b.end,
-					end:      a.start,
-					includes: includes(b.IncludeStart(), a.IncludeEnd()),
-				}
-			}
 		} else if a.end < b.end {
-			// Case 2c
-			return *a
-		} else if a.start < b.end {
-			// Case 2d
-			return span[T]{
-				start:    a.start,
-				end:      b.end,
-				includes: includes(b.IncludeEnd(), a.IncludeStart()),
-			}
-		} else if a.end == b.end {
-			// Case 2e
-			return span[T]{
-				start:    a.start,
-				end:      b.end,
-				includes: includes(a.IncludeStart(), a.IncludeEnd() && b.IncludeEnd())}
+			// Case 1.2
 		}
-	} else if a.start == b.start {
-		if a.end < b.end {
-			// Case 1a
-			return *a
-		} else if a.end == b.end {
-			// Case 1b
-			return span[T]{
-				start:    a.start,
-				end:      a.end,
-				includes: a.includes & b.includes}
-		} else if a.end > b.end {
-			// Case 1c
-			return *b
-		}
+
 	}
 	return to_span(makeEmpty[T]())
 }
